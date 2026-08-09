@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# PROJECT: Bootc Manager - Simple and Ease
+# PROJECT: Bootc Manager - Simple CLI tool
 # AUTHOR:  Diogo Pessoa (https://github.com/diogopessoa/bootc-manager/)
 # LICENSE: MIT
 # ==============================================================================
 
 set -u
 
-VERSION="0.3.0"
+VERSION="0.4.0"
 REPO_API_URL="https://api.github.com/repos/diogopessoa/bootc-manager/releases"
 REAL_USER="${SUDO_USER:-$USER}"
 USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
@@ -47,7 +47,7 @@ load_config() {
     fi
 }
 
-# --- Update check do próprio script ---
+# --- Update check script ---
 check_update() {
     if ! command -v jq &>/dev/null || ! command -v curl &>/dev/null; then
         return
@@ -65,10 +65,17 @@ check_update() {
     fi
 }
 
-# --- Detecção de backend e mutações locais ---
+# --- Backend detection and local mutations ---
 detect_backend() {
     if command -v bootc &>/dev/null; then
-        BACKEND="bootc"
+        # Checks if bootc has a configured OCI image/source
+        if sudo bootc status 2>&1 | grep -q "Image:"; then
+            BACKEND="bootc"
+        elif command -v rpm-ostree &>/dev/null; then
+            BACKEND="rpm-ostree"
+        else
+            BACKEND="bootc"
+        fi
     elif command -v rpm-ostree &>/dev/null; then
         BACKEND="rpm-ostree"
     else
@@ -89,7 +96,7 @@ check_local_mutations() {
     if echo "$status_json" | jq -e '
         .deployments[] |
         select(.booted == true) |
-        ((.packages? // []) + (.local_packages? // []) + (."local-packages"? // [])) |
+        ((.packages? // []) + (.local_packages? // []) + (."local-packages"? // []) + (."requested-local-packages"? // [])) |
         length > 0
     ' &>/dev/null; then
         HAS_LAYERING=1
@@ -144,7 +151,7 @@ bootc_upgrade() {
             fi
         fi
     elif [[ "$BACKEND" == "rpm-ostree" ]]; then
-        echo -e "${BLUE}Bootc not detected. Using rpm-ostree upgrade instead.${NC}"
+        echo -e "${BLUE}Bootc image source not detected. Using rpm-ostree upgrade instead.${NC}"
         if [[ "$do_dry_run" -eq 1 ]]; then
             echo -e "${BLUE}Dry-run mode: checking for available updates...${NC}"
             sudo rpm-ostree upgrade --check
@@ -241,7 +248,95 @@ bootc_switch() {
     read -p "Press Enter to return..."
 }
 
-# --- Ajuda ---
+# --- Reset / Clean Image (Remove Layering) ---
+clean_image_reset() {
+    echo -e "\n--- ${CYAN}Reset to Clean Image (Remove Local Layering)${NC} ---\n"
+
+    if ! command -v rpm-ostree &>/dev/null; then
+        echo -e "${RED}rpm-ostree utility is required to inspect/remove local layering.${NC}"
+        read -p "Press Enter to return..."
+        return
+    fi
+
+    local status_json
+    status_json=$(sudo rpm-ostree status --json 2>/dev/null) || {
+        echo -e "${RED}Failed to read rpm-ostree status. Cannot inspect layering.${NC}"
+        read -p "Press Enter to return..."
+        return
+    }
+
+    local packages
+    packages=$(echo "$status_json" | jq -r '.deployments[] | select(.booted == true) | 
+        ((.packages // []) + 
+        (."local-packages" // []) + 
+        (.local_packages // []) + 
+        (."requested-local-packages" // [])) | unique | .[]' 2>/dev/null)
+
+    if [[ -z "$packages" ]]; then
+        echo -e "${GREEN}No local package layering found! Your base image is clean.${NC}\n"
+        read -p "Press Enter to return..."
+        return
+    fi
+
+    mapfile -t pkg_list < <(echo "$packages")
+
+    echo -e "${RED}The following local package layers were detected:${NC}"
+    for i in "${!pkg_list[@]}"; do
+        echo -e "  $((i+1))) ${RED}${pkg_list[$i]}${NC}"
+    done
+    echo
+
+    echo -e "${PURPLE}Options:${NC}"
+    echo " [A] Remove ALL layers (Reset to pure base image)"
+    echo " [1-${#pkg_list[@]}] Remove a single package"
+    echo " [0] Cancel"
+    echo
+
+    read -rp "Select option: " choice
+
+    if [[ "$choice" =~ ^[Aa]$ ]]; then
+        read -p "Do you want to reset the system to clean image state? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            echo -e "\n${BLUE}Resetting system to clean image state...${NC}"
+            if sudo rpm-ostree reset; then
+                echo -e "\n${GREEN}Reset scheduled successfully!${NC}"
+                echo -e "${BLUE}Reboot required for changes to take effect.${NC}"
+                echo -e "${BLUE}After rebooting, 'bootc upgrade' will run smoothly without layering conflicts.${NC}"
+                HAS_LAYERING=0
+            else
+                echo -e "\n${RED}Reset operation failed.${NC}"
+            fi
+        else
+            echo -e "\n${PURPLE}Reset cancelled by user.${NC}"
+        fi
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && (( choice > 0 && choice <= ${#pkg_list[@]} )); then
+        local selected_pkg="${pkg_list[$((choice-1))]}"
+        local pkg_clean
+        pkg_clean=$(echo "$selected_pkg" | sed 's/-[0-9].*//')
+
+        read -p "Do you want to remove layer '$pkg_clean'? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            echo -e "\n${BLUE}Removing layer '$pkg_clean'...${NC}"
+            if sudo rpm-ostree uninstall "$pkg_clean"; then
+                echo -e "\n${GREEN}Uninstall scheduled! Reboot to complete removal.${NC}"
+                check_local_mutations
+            else
+                echo -e "\n${RED}Failed to uninstall '$pkg_clean'.${NC}"
+            fi
+        else
+            echo -e "\n${PURPLE}Removal cancelled by user.${NC}"
+        fi
+    elif [[ "$choice" == "0" ]]; then
+        echo -e "${PURPLE}Operation cancelled.${NC}"
+    else
+        echo -e "${RED}Invalid selection!${NC}"
+    fi
+
+    echo
+    read -p "Press Enter to return..."
+}
+
+# --- Help ---
 show_help() {
     clear
     echo -e "${BLUE}╭──────────────────────────────────────────────────────────╮${NC}"
@@ -251,7 +346,8 @@ show_help() {
     echo -e "1) Upgrade: Updates the system image using bootc or rpm-ostree."
     echo -e "2) Rollback: Reverts to the previous deployment on next boot."
     echo -e "3) Switch: Changes the OS container image target."
-    echo -e "4) Status: Shows detailed technical state of your OS."
+    echo -e "4) Reset Image: Clears local package layering to restore a pristine image."
+    echo -e "5) Status: Shows detailed technical state of your OS."
     echo -e "\n${BLUE}────────────────────────────────────────────────────────────${NC}"
     echo -e "${BOLD}Configuration file:${NC} $CONFIG_FILE"
     echo -e "\n${BOLD}For full guide, visit:${NC}"
@@ -283,19 +379,21 @@ show_menu() {
 
     if [[ "$HAS_LAYERING" -eq 1 ]]; then
         echo -e "${RED}Warning: Local package layering detected.${NC}"
+        echo -e "${RED}Run option [4] to clean layering if bootc upgrade fails.${NC}"
     fi
 
     echo
-    echo "[1] Upgrade system"
-    echo "[2] Rollback to previous deployment"
-    echo "[3] Switch container image"
-    echo "[4] Status"
-    echo "[5] Documentation & Help"
-    echo "[0] Exit"
+    echo "[1] 🔂 Upgrade system"
+    echo "[2] ↩️  Rollback to previous deployment"
+    echo "[3] 🔀 Switch container image"
+    echo "[4] 🧹 Reset to clean image (remove layering)"
+    echo "[5] 🛡️  Status"
+    echo "[6] 🛟 Documentation & Help"
+    echo "[0] ✖️  Exit"
 
     echo
     echo -e "${BLUE}────────────────────────────────────${NC}"
-    echo -ne "${GREEN}Option [0-5]:${NC} "
+    echo -ne "${GREEN}Option [0-6]:${NC} "
 }
 
 # --- Main ---
@@ -313,8 +411,9 @@ main() {
             1) bootc_upgrade ;;
             2) bootc_rollback ;;
             3) bootc_switch ;;
-            4) clear; bootc_status; read -p "Press Enter to return..." ;;
-            5) show_help ;;
+            4) clean_image_reset ;;
+            5) clear; bootc_status; read -p "Press Enter to return..." ;;
+            6) show_help ;;
             0)
                 clear
                 echo -e "\nhttps://github.com/diogopessoa/bootc-manager\n"
