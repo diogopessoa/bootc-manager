@@ -7,7 +7,7 @@
 
 set -u
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 REPO_API_URL="https://api.github.com/repos/diogopessoa/bootc-manager/releases"
 REAL_USER="${SUDO_USER:-$USER}"
 USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
@@ -68,9 +68,16 @@ check_update() {
 # --- Backend detection and local mutations ---
 detect_backend() {
     if command -v bootc &>/dev/null; then
-        # Checks if bootc has a configured OCI image/source
-        if sudo bootc status 2>&1 | grep -q "Image:"; then
+        local bootc_out
+        bootc_out=$(sudo bootc status 2>&1 || true)
+
+        # 1. Checa por variações de sintaxe do bootc status (case-insensitive)
+        if echo "$bootc_out" | grep -qiE "image:|image-source:|container:|type: ostree/container"; then
             BACKEND="bootc"
+        # 2. Checa se o sistema roda em um ambiente nativamente gerido por bootc
+        elif [[ -d /usr/lib/bootc || -d /sysroot/bootc ]]; then
+            BACKEND="bootc"
+        # 3. Fallback para rpm-ostree se bootc status indicar explicitamente ausência de imagem OCI
         elif command -v rpm-ostree &>/dev/null; then
             BACKEND="rpm-ostree"
         else
@@ -83,32 +90,18 @@ detect_backend() {
     fi
 }
 
-check_local_mutations() {
-    HAS_LAYERING=0
-
-    if ! command -v rpm-ostree &>/dev/null; then
-        return
-    fi
-
-    local status_json
-    status_json=$(sudo rpm-ostree status --json 2>/dev/null) || return
-
-    if echo "$status_json" | jq -e '
-        .deployments[] |
-        select(.booted == true) |
-        ((.packages? // []) + (.local_packages? // []) + (."local-packages"? // []) + (."requested-local-packages"? // [])) |
-        length > 0
-    ' &>/dev/null; then
-        HAS_LAYERING=1
-    fi
-}
-
 # --- Status ---
 bootc_status() {
     echo -e "\n--- ${CYAN}System Status${NC} ---\n"
 
     if [[ "$BACKEND" == "bootc" ]]; then
+        echo -e "${GREEN}[bootc status]${NC}"
         sudo bootc status
+        
+        if command -v rpm-ostree &>/dev/null; then
+            echo -e "\n${BLUE}[rpm-ostree deployment details]${NC}"
+            sudo rpm-ostree status
+        fi
     elif [[ "$BACKEND" == "rpm-ostree" ]]; then
         sudo rpm-ostree status
     else
@@ -361,10 +354,10 @@ show_help() {
 show_menu() {
     clear
 
-    echo "======================================"
-    echo -e " ${BOLD}Bootc Manager${NC}"
-    echo " Version $VERSION"
-    echo "======================================"
+    echo "==============================================="
+    echo -e "                 ${BOLD}Bootc Manager${NC}"
+    echo "                 Version $VERSION"
+    echo "==============================================="
     echo
 
     if [[ -n "$UPDATE_STATUS" ]]; then
@@ -384,15 +377,15 @@ show_menu() {
 
     echo
     echo "[1] 🔂 Upgrade system"
-    echo "[2] ↩️  Rollback to previous deployment"
+    echo "[2] ↩️ Rollback to previous deployment"
     echo "[3] 🔀 Switch container image"
     echo "[4] 🧹 Reset to clean image (remove layering)"
-    echo "[5] 🛡️  Status"
+    echo "[5] 🛡️ Status"
     echo "[6] 🛟 Documentation & Help"
-    echo "[0] ✖️  Exit"
+    echo "[0] ✖️ Exit"
 
     echo
-    echo -e "${BLUE}────────────────────────────────────${NC}"
+    echo -e "${BLUE}──────────────────────────────────────────────${NC}"
     echo -ne "${GREEN}Option [0-6]:${NC} "
 }
 
