@@ -8,7 +8,7 @@
 [![Shell Script](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
 [![Release](https://img.shields.io/github/v/release/diogopessoa/bootc-manager?color=orange)](https://github.com/diogopessoa/bootc-manager/releases)
 
-**Bootc Manager** is not intended to replace `bootc` or introduce redundant features. Instead, it provides a user-friendly menu-driven interface to simplify daily maintenance tasks—making container-based OS management accessible and straightforward.
+**Bootc Manager** is a simple and intuitive CLI tool, not intended to replace `bootc` or introduce redundant functionality. Instead, it offers a user-friendly command-line interface to simplify the maintenance and management of container-based operating systems.
 
 
 ## Key Features
@@ -22,7 +22,7 @@
 
 ## Requirements
 
-* **Operating System:** Operating System:** Fedora Atomic 45+ and derivatives (Silverblue, Kinoite, Sericea, Aurora, Bazzite, etc.).
+* **Operating System:** Fedora Atomic 45+ and derivatives (Silverblue, Kinoite, Sericea, Aurora, Bazzite, etc.).
 * **Core Tooling:** `bootc` and/or `rpm-ostree`.
   
 ## Quick Installation
@@ -40,7 +40,7 @@ Once installed, you can launch the application by:
 2. Searching for **Bootc-Manager** in your system application menu.
 
 
-## Configuration of bootc-manager.conf (still under development)
+## bootc-manager.conf (still under development)
 
 The `bootc-manager.conf` file can be used to configure Bootc-Manager without complicating the standard workflow. Can be configured in `/etc/bootc-manager.conf`, it will allow for options such as:
 
