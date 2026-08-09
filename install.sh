@@ -16,18 +16,24 @@ fi
 USER_HOME="${HOME:-/root}"
 BIN_PATH="/usr/local/bin/bootc-manager"
 
-if [ "$IS_ROOT" = true ]; then
-  DESKTOP_PATH="/usr/share/applications/bootc-manager.desktop"
-  ICON_DIR="/usr/share/icons/hicolor/scalable/apps"
-else
-  DESKTOP_PATH="$USER_HOME/.local/share/applications/bootc-manager.desktop"
-  ICON_DIR="$USER_HOME/.local/share/icons"
-fi
-
+# Diretório e caminho do ícone fixados no HOME do usuário real
+ICON_DIR="$USER_HOME/.local/share/icons"
 ICON_PATH="$ICON_DIR/bootc-manager.svg"
 
+if [ "$IS_ROOT" = true ]; then
+  DESKTOP_PATH="/usr/share/applications/bootc-manager.desktop"
+else
+  DESKTOP_PATH="$USER_HOME/.local/share/applications/bootc-manager.desktop"
+fi
+
+# Criar diretórios de destino
 mkdir -p "$ICON_DIR"
 mkdir -p "$(dirname "$DESKTOP_PATH")"
+
+# Ajustar permissão do diretório do ícone caso tenha sido criado como root via sudo
+if [ "$IS_ROOT" = true ] && [ -n "${SUDO_USER:-}" ]; then
+  chown -R "$REAL_USER:" "$ICON_DIR"
+fi
 
 SUDO=""
 [ "$IS_ROOT" = false ] && SUDO="sudo"
@@ -42,7 +48,12 @@ fi
 $SUDO chmod +x "$BIN_PATH"
 
 echo "Downloading icon..."
-curl -fsSL "https://raw.githubusercontent.com/diogopessoa/bootc-manager/main/bootc-manager.svg" -o "$ICON_PATH" || true
+if [ "$IS_ROOT" = true ] && [ -n "${SUDO_USER:-}" ]; then
+  # Baixa o ícone com a identidade do usuário comum para evitar conflito de permissão no HOME
+  sudo -u "$REAL_USER" curl -fsSL "https://raw.githubusercontent.com/diogopessoa/bootc-manager/main/bootc-manager.svg" -o "$ICON_PATH" || true
+else
+  curl -fsSL "https://raw.githubusercontent.com/diogopessoa/bootc-manager/main/bootc-manager.svg" -o "$ICON_PATH" || true
+fi
 
 echo "Creating menu shortcut..."
 cat <<EOF > "$DESKTOP_PATH"
