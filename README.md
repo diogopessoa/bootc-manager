@@ -3,12 +3,27 @@
   <img src="slogan_bootc_manager.png" alt="Bootc Manager slogan" width="100%">
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Fedora Atomic](https://img.shields.io/badge/Fedora-Atomic_&_bootc-blueviolet.svg)](https://fedoraproject.org/)
-[![Shell Script](https://img.shields.io/badge/Language-Bash-4EAA25.svg)](https://www.gnu.org/software/bash/)
-[![Release](https://img.shields.io/github/v/release/diogopessoa/bootc-manager?color=orange)](https://github.com/diogopessoa/bootc-manager/releases)
+<div align="center">
+  <a href="https://fedoraproject.org/">
+    <img src="https://img.shields.io/badge/Fedora-Atomic_%26_bootc-blueviolet.svg" alt="Fedora Atomic e bootc">
+  </a>
 
-**Bootc Manager** is a simple and intuitive CLI tool, not intended to replace `bootc` or introduce redundant functionality. Instead, it offers a user-friendly command-line interface to simplify the maintenance and management of container-based operating systems.
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="Licença MIT">
+  </a>
+  
+  <a href="https://www.gnu.org/software/bash/">
+    <img src="https://img.shields.io/badge/Language-Bash-4EAA25.svg" alt="Linguagem Bash">
+  </a>
+
+  <a href="https://github.com/diogopessoa/bootc-manager/releases">
+    <img src="https://img.shields.io/github/v/release/diogopessoa/bootc-manager?color=orange" alt="Última versão">
+  </a>
+</div>
+
+---
+
+**Bootc Manager** is a simple and intuitive command-line tool for [Bootc](https://bootc.dev/). It offers a user-friendly command line interface with management and maintenance options for Fedora Atomic and derivative systems.
 
 
 ## Key Features
@@ -22,7 +37,7 @@
 
 ## Requirements
 
-* **Operating System:** Fedora Atomic 45+ and derivatives (Silverblue, Kinoite, Sericea, Aurora, Bazzite, etc.).
+* **Operating System:** Fedora Atomic 44+ and derivatives (Silverblue, Kinoite, Sericea, Aurora, Bazzite, etc.).
 * **Core Tooling:** `bootc` and/or `rpm-ostree`.
   
 ## Quick Installation
@@ -47,14 +62,6 @@ The `bootc-manager.conf` file can be used to configure Bootc-Manager without com
 - choosing a preferred backend (bootc vs. rpm-ostree);
 - enabling/disabling layering warnings;
 - enable check-only
-
-Example:
-
-```bash
-# Enable check-only / dry-run mode by default
-PREFER_DRY_RUN=1
-
-```
 
 ## File Destination Tree
 
