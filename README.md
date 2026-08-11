@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="slogan_bootc_manager.png" alt="Bootc Manager slogan" width="100%">
+  <img src="files/slogan_bootc_manager.png" alt="Bootc Manager slogan" width="100%">
 </p>
 
 <div align="center">
@@ -34,6 +34,11 @@
 - **Layering Detection:** Automatically inspects and warns about local package layering (`rpm-ostree` mutations) that might conflict with `bootc` updates.
 - **Configurable of bootc-manager.conf:** Allows you to configure the Bootc-Manager without complicating the standard workflow.
 - **Desktop Integration:** Includes a `.desktop` shortcut for seamless execution directly from your application launcher.
+
+## Screenshots
+
+Main Menu:
+![main_menu](files/main-menu.jpg)
 
 ## Requirements
 
