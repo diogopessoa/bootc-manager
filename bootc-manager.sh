@@ -27,13 +27,20 @@ BACKEND=""
 HAS_LAYERING=0
 PREFER_DRY_RUN=0
 
-# --- Terminal check (Ptyxis / GNOME Terminal) ---
+# --- Terminal check (Ptyxis / GNOME Terminal / GNOME Console / Fallback) ---
 SCRIPT_PATH=$(readlink -f "$0")
 if [[ ! -t 0 ]]; then
     if command -v ptyxis &>/dev/null; then
         exec ptyxis -- bash -c "$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1"
     elif command -v gnome-terminal &>/dev/null; then
         exec gnome-terminal -- bash -c "$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1"
+    elif command -v kgx &>/dev/null; then
+        # GNOME Console padrão do AlmaLinux / RHEL / Fedora recente
+        exec kgx -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
+    elif command -v x-terminal-emulator &>/dev/null; then
+        exec x-terminal-emulator -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
+    elif command -v xterm &>/dev/null; then
+        exec xterm -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
     fi
     exit 0
 fi
