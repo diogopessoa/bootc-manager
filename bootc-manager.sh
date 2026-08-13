@@ -7,7 +7,7 @@
 
 set -u
 
-VERSION="0.5.0"
+VERSION="0.6.0"
 REPO_API_URL="https://api.github.com/repos/diogopessoa/bootc-manager/releases"
 REAL_USER="${SUDO_USER:-$USER}"
 USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
@@ -27,32 +27,39 @@ BACKEND=""
 HAS_LAYERING=0
 PREFER_DRY_RUN=0
 
-# --- Terminal check (Ptyxis / GNOME Terminal / GNOME Console / Fallback) ---
+# --- Terminal check (Ptyxis / GNOME Terminal / Console / KDE / Others / Fallback) ---
 SCRIPT_PATH=$(readlink -f "$0")
-if [[ ! -t 0 ]]; then
-    if command -v ptyxis &>/dev/null; then
-        exec ptyxis -- bash -c "$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1"
-    elif command -v gnome-terminal &>/dev/null; then
-        exec gnome-terminal -- bash -c "$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1"
-    elif command -v kgx &>/dev/null; then
-        # GNOME Console padrão do AlmaLinux / RHEL / Fedora recente
-        exec kgx -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
-    elif command -v x-terminal-emulator &>/dev/null; then
-        exec x-terminal-emulator -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
-    elif command -v xterm &>/dev/null; then
-        exec xterm -e "bash -c \"$SCRIPT_PATH; echo; read -p 'Press Enter to exit...' -n1\""
-    fi
-    exit 0
-fi
 
-# --- Config loading ---
-load_config() {
-    PREFER_DRY_RUN=0
-    if [[ -f "$CONFIG_FILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$CONFIG_FILE" 2>/dev/null || true
+if [[ ! -t 0 ]]; then
+    CMD="bash -c '\"$SCRIPT_PATH\"; echo; read -p '\"'\"'Press any key to exit...'\"'\"' -n1'"
+
+    if command -v ptyxis &>/dev/null; then
+        exec ptyxis -- $CMD
+    elif command -v gnome-terminal &>/dev/null; then
+        exec gnome-terminal -- $CMD
+    elif command -v kgx &>/dev/null; then
+        exec kgx -e "$CMD"
+    elif command -v gnome-console &>/dev/null; then
+        exec gnome-console -e "$CMD"
+    elif command -v konsole &>/dev/null; then
+        exec konsole -e "$CMD"
+    elif command -v kitty &>/dev/null; then
+        exec kitty -e "$CMD"
+    elif command -v alacritty &>/dev/null; then
+        exec alacritty -e "$CMD"
+    elif command -v cosmic-terminal &>/dev/null; then
+        exec cosmic-terminal -e "$CMD"
+    elif command -v ghostty &>/dev/null; then
+        exec ghostty -e "$CMD"
+    elif command -v x-terminal-emulator &>/dev/null; then
+        exec x-terminal-emulator -e "$CMD"
+    elif command -v xterm &>/dev/null; then
+        exec xterm -e "$CMD"
+    else
+        echo "No supported terminal emulator found." >&2
+        exit 1
     fi
-}
+fi
 
 # --- Update check script ---
 check_update() {
