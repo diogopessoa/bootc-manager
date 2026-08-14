@@ -61,6 +61,15 @@ if [[ ! -t 0 ]]; then
     fi
 fi
 
+# --- Config loading ---
+load_config() {
+    PREFER_DRY_RUN=0
+    if [[ -f "$CONFIG_FILE" ]]; then
+        # shellcheck disable=SC1090
+        source "$CONFIG_FILE" 2>/dev/null || true
+    fi
+}
+
 # --- Update check script ---
 check_update() {
     if ! command -v jq &>/dev/null || ! command -v curl &>/dev/null; then
@@ -101,6 +110,26 @@ detect_backend() {
         BACKEND="rpm-ostree"
     else
         BACKEND="unknown"
+    fi
+}
+
+check_local_mutations() {
+    HAS_LAYERING=0
+
+    if ! command -v rpm-ostree &>/dev/null; then
+        return
+    fi
+
+    local status_json
+    status_json=$(sudo rpm-ostree status --json 2>/dev/null) || return
+
+    if echo "$status_json" | jq -e '
+        .deployments[] |
+        select(.booted == true) |
+        ((.packages? // []) + (.local_packages? // []) + (."local-packages"? // []) + (."requested-local-packages"? // [])) |
+        length > 0
+    ' &>/dev/null; then
+        HAS_LAYERING=1
     fi
 }
 
