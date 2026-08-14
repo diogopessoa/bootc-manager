@@ -420,12 +420,12 @@ show_menu() {
 
     echo
     echo "[1] 🔂 Upgrade system"
-    echo "[2] ↩️ Rollback to previous deployment"
+    echo "[2] ↩️  Rollback to previous deployment"
     echo "[3] 🔀 Switch container image"
     echo "[4] 🧹 Reset to clean image (remove layering)"
-    echo "[5] 🛡️ Status"
+    echo "[5] 🛡️  Status"
     echo "[6] 🛟 Documentation & Help"
-    echo "[0] ✖️ Exit"
+    echo "[0] ✖️  Exit"
 
     echo
     echo -e "${BLUE}──────────────────────────────────────────────${NC}"
