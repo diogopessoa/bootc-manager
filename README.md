@@ -37,8 +37,11 @@
 
 ## Screenshots
 
-Main Menu:
+Main menu:
 ![main_menu](files/main-menu.jpg)
+
+Application icon:
+![main_menu](files/screenshot_app_menu.png)
 
 ## Requirements
 
