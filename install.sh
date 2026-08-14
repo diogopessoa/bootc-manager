@@ -76,4 +76,4 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
-echo "You can launch it by typing 'bootc-manager' in your terminal."
+echo "You can now find 'Bootc-Manager' in your application menu or type 'bootc-manager' in the terminal."
